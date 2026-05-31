@@ -60,12 +60,29 @@ const state = {
 let searchTimer;
 
 const themeColors = [
-  { name: "Poppin Pink", value: "#ff6f9f" },
-  { name: "MyGO Blue", value: "#4f8cff" },
-  { name: "Roselia Violet", value: "#7664d9" },
-  { name: "Stage Mint", value: "#37b8a7" },
-  { name: "Encore Yellow", value: "#e7ad2d" },
-  { name: "Ruby Red", value: "#d34b68" },
+  { name: "BanG Dream! - Poppin'Party", value: "#FF3377" },
+  { name: "BanG Dream! - Afterglow", value: "#EE3344" },
+  { name: "BanG Dream! - Pastel＊Palettes", value: "#33DDAA" },
+  { name: "BanG Dream! - Roselia", value: "#3344AA" },
+  { name: "BanG Dream! - Hello, Happy World!", value: "#FFC02A" },
+  { name: "BanG Dream! - Morfonica", value: "#33AAFF" },
+  { name: "BanG Dream! - RAISE A SUILEN", value: "#22CCCC" },
+  { name: "BanG Dream! - MyGO!!!!!", value: "#3288BB" },
+  { name: "BanG Dream! - Ave Mujica", value: "#881144" },
+  { name: "BanG Dream! - 夢限大みゅーたいぷ", value: "#EC7384" },
+  { name: "BanG Dream! - millsage", value: "#AA22EE" },
+  { name: "BanG Dream! - 一家Dumb Rock!", value: "#FFAA33" },
+  { name: "Love Live! - μ's", value: "#E4007F" },
+  { name: "Love Live! - A-RISE", value: "#B8B8B8" },
+  { name: "Love Live! - Aqours", value: "#00A3E0" },
+  { name: "Love Live! - Saint Snow", value: "#E60033" },
+  { name: "Love Live! - 虹ヶ咲学園スクールアイドル同好会", value: "#FAB920" },
+  { name: "Love Live! - Liella!", value: "#A546C8" },
+  { name: "Love Live! - Sunny Passion", value: "#FFCC33" },
+  { name: "Love Live! - 蓮ノ空女学院スクールアイドルクラブ", value: "#F6ADC6" },
+  { name: "Love Live! - スクールアイドルミュージカル", value: "#E95A9C" },
+  { name: "Love Live! - いきづらい部！", value: "#FF8C00" },
+  { name: "Love Live! - Bluebird", value: "#4BA3D9" },
 ];
 
 const sampleConcerts = [
@@ -76,7 +93,7 @@ const sampleConcerts = [
     city: "上海",
     venue: "Dream Hall",
     address: "浦东新区",
-    themeColor: "#ff6f9f",
+    themeColor: "#FF3377",
     tags: ["偶像企划", "Band", "动画相关"],
     note: "第一次把粉色应援棒带到现场，安可时全场像一本会发光的手账。",
     thoughts:
@@ -98,7 +115,7 @@ const sampleConcerts = [
     city: "广州",
     venue: "Blue Note Space",
     address: "天河区",
-    themeColor: "#4f8cff",
+    themeColor: "#3288BB",
     tags: ["声优", "Band", "Live"],
     note: "蓝色灯海很安静，但每一下鼓点都像在说“继续走”。",
     thoughts:
@@ -120,7 +137,7 @@ const sampleConcerts = [
     city: "东京",
     venue: "Moon Theater",
     address: "有明",
-    themeColor: "#7664d9",
+    themeColor: "#3344AA",
     tags: ["海外远征", "动画相关", "个人记录"],
     note: "紫色和白色灯光压下来时，整个场馆像被封进一枚旧胸针。",
     thoughts:
