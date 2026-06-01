@@ -1,0 +1,18 @@
+{
+  "name": "Live Memory Archive",
+  "short_name": "Live Memory",
+  "description": "A personal archive for live concert memories.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f4f8",
+  "theme_color": "#ff6f9f",
+  "icons": [
+    {
+      "src": "./assets/icons/2.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
