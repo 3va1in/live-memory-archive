@@ -6,6 +6,7 @@ create table if not exists public.concerts (
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   title text not null,
   project text,
+  projects text[] default '{}',
   date date,
   city text,
   venue text,
@@ -27,6 +28,9 @@ create table if not exists public.concerts (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.concerts
+add column if not exists projects text[] default '{}';
 
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
