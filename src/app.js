@@ -231,6 +231,12 @@ function list(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function concertProjects(concert, includeLegacy = true) {
+  const projects = list(concert.projects).filter(Boolean);
+  if (projects.length || !includeLegacy) return projects;
+  return concert.project ? [concert.project] : [];
+}
+
 function splitLines(value) {
   return String(value || "")
     .split(/\n|,/)
@@ -275,7 +281,7 @@ function uniqueTags() {
 }
 
 function uniqueProjects() {
-  return [...new Set(state.concerts.map((concert) => concert.project).filter(Boolean))].sort();
+  return [...new Set(state.concerts.flatMap((concert) => concertProjects(concert, false)))].sort();
 }
 
 function filteredConcerts() {
@@ -284,6 +290,7 @@ function filteredConcerts() {
     const haystack = [
       concert.title,
       concert.project,
+      ...concertProjects(concert),
       concert.city,
       concert.venue,
       concert.address,
@@ -293,14 +300,14 @@ function filteredConcerts() {
       .join(" ")
       .toLowerCase();
     const tagOk = state.tag === "all" || list(concert.tags).includes(state.tag);
-    const projectOk = state.project === "all" || concert.project === state.project;
+    const projectOk = state.project === "all" || concertProjects(concert).includes(state.project);
     return (!query || haystack.includes(query)) && tagOk && projectOk;
   });
 }
 
 function stats() {
   const cities = new Set(state.concerts.map((concert) => concert.city).filter(Boolean));
-  const projects = new Set(state.concerts.map((concert) => concert.project).filter(Boolean));
+  const projects = new Set(state.concerts.flatMap((concert) => concertProjects(concert)));
   return {
     concerts: state.concerts.length,
     cities: cities.size,
@@ -311,7 +318,9 @@ function stats() {
 
 function projectCounts() {
   const counts = new Map();
-  state.concerts.forEach((concert) => counts.set(concert.project, (counts.get(concert.project) || 0) + 1));
+  state.concerts.forEach((concert) => {
+    concertProjects(concert).forEach((project) => counts.set(project, (counts.get(project) || 0) + 1));
+  });
   const max = Math.max(1, ...counts.values());
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([project, count]) => ({ project, count, max }));
 }
@@ -356,7 +365,7 @@ async function seedIfNeeded() {
 
 function makeCoverSvg(concert) {
   const title = escapeHtml(concert.title);
-  const project = escapeHtml(concert.project);
+  const project = escapeHtml(concertProjects(concert).join(" / "));
   const color = concert.themeColor || "#ff6f9f";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
     <defs>
@@ -569,7 +578,7 @@ function renderTimelineItem(concert) {
 }
 
 function renderProjectBar(item) {
-  const concert = state.concerts.find((row) => row.project === item.project);
+  const concert = state.concerts.find((row) => concertProjects(row).includes(item.project));
   const percent = Math.max(8, Math.round((item.count / item.max) * 100));
   return `
     <div class="project-bar" style="--theme:${concert?.themeColor || "#ff6f9f"}">
@@ -620,6 +629,7 @@ function renderToolbar() {
 
 function renderConcertCard(concert) {
   const cover = state.coverUrls.get(concert.id);
+  const projectText = concertProjects(concert).join(" / ") || "-";
   return `
     <article class="concert-card" style="--theme:${concert.themeColor || "#ff6f9f"}">
       <div class="concert-cover">${cover ? `<img src="${cover}" alt="${escapeHtml(concert.title)}" />` : ""}</div>
@@ -627,7 +637,7 @@ function renderConcertCard(concert) {
       <div class="concert-body">
         <span class="concert-date">${formatDate(concert.date)}</span>
         <h3>${escapeHtml(concert.title)}</h3>
-        <div class="meta">${escapeHtml(concert.project || "-")} · ${escapeHtml(concert.city || "-")} / ${escapeHtml(concert.venue || "-")}</div>
+        <div class="meta">${escapeHtml(projectText)} · ${escapeHtml(concert.city || "-")} / ${escapeHtml(concert.venue || "-")}</div>
         <p class="note">${escapeHtml(concert.note || "")}</p>
         <div class="tag-list">${list(concert.tags).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>
         <div class="card-actions">
@@ -646,6 +656,7 @@ function renderDetail() {
   const concert = state.selectedConcert;
   if (!concert) return renderLibrary();
   const cover = state.coverUrls.get(concert.id) || createObjectUrl(state.selectedMedia.find((media) => media.id === concert.coverMediaId));
+  const projectText = concertProjects(concert).join(" / ") || "-";
   return `
     <button class="ghost-btn" data-view="library">← ${t("back")}</button>
     <section class="detail-hero" style="--theme:${concert.themeColor || "#ff6f9f"}">
@@ -653,7 +664,7 @@ function renderDetail() {
       <div class="detail-title">
         <span class="concert-date">${formatDate(concert.date)}</span>
         <h2>${escapeHtml(concert.title)}</h2>
-        <div>${escapeHtml(concert.project || "-")} · ${escapeHtml(concert.city || "-")} / ${escapeHtml(concert.venue || "-")}</div>
+        <div>${escapeHtml(projectText)} · ${escapeHtml(concert.city || "-")} / ${escapeHtml(concert.venue || "-")}</div>
       </div>
     </section>
     <div class="section-head">
@@ -671,7 +682,7 @@ function renderDetail() {
       <div class="panel">
         <h3>${t("basicInfo")}</h3>
         <div class="info-list" style="margin-top:12px">
-          ${infoRow(t("project"), concert.project)}
+          ${infoRow(t("project"), projectText)}
           ${infoRow(t("date"), formatDate(concert.date))}
           ${infoRow(t("city"), concert.city)}
           ${infoRow(t("venue"), concert.venue)}
@@ -751,6 +762,20 @@ function renderSelectedTagTokens(tags) {
     .join("");
 }
 
+function renderPresetPills(selectedItems, presets, emptyText, action) {
+  const selected = new Set(selectedItems);
+  if (!presets.length) return `<span class="section-note">${emptyText}</span>`;
+  return presets
+    .map(
+      (item) => `
+        <button type="button" class="preset-tag ${selected.has(item) ? "active" : ""}" data-action="${action}" data-value="${escapeHtml(item)}">
+          ${escapeHtml(item)}
+        </button>
+      `,
+    )
+    .join("");
+}
+
 function renderPresetTags(selectedTags) {
   const selected = new Set(selectedTags);
   const presets = uniqueTags();
@@ -766,22 +791,52 @@ function renderPresetTags(selectedTags) {
     .join("");
 }
 
-function tagEditor(tags = []) {
-  const selectedTags = list(tags);
+function pillEditor({ name, label, items = [], placeholder, presetLabel, emptyText, presets, inputAction, addAction, removeAction }) {
+  const selectedItems = list(items);
   return `
-    <div class="field full tag-editor">
-      <span>${t("tags")}</span>
-      <input type="hidden" name="tags" value="${escapeHtml(joinLines(selectedTags))}" />
+    <div class="field full tag-editor" data-editor-name="${name}">
+      <span>${label}</span>
+      <input type="hidden" name="${name}" value="${escapeHtml(joinLines(selectedItems))}" />
       <div class="tag-input-box">
-        <span class="selected-tags">${renderSelectedTagTokens(selectedTags)}</span>
-        <input data-action="tag-input" placeholder="${t("tagInputPlaceholder")}" autocomplete="off" />
+        <span class="selected-tags">${renderSelectedTagTokens(selectedItems).replaceAll("remove-form-tag", removeAction)}</span>
+        <input data-action="${inputAction}" placeholder="${placeholder}" autocomplete="off" />
       </div>
       <div>
-        <span class="field-label">${t("tagPresets")}</span>
-        <div class="preset-tags">${renderPresetTags(selectedTags)}</div>
+        <span class="field-label">${presetLabel}</span>
+        <div class="preset-tags">${renderPresetPills(selectedItems, presets, emptyText, addAction)}</div>
       </div>
     </div>
   `;
+}
+
+function tagEditor(tags = []) {
+  return pillEditor({
+    name: "tags",
+    label: t("tags"),
+    items: tags,
+    placeholder: t("tagInputPlaceholder"),
+    presetLabel: t("tagPresets"),
+    emptyText: t("noTagPresets"),
+    presets: uniqueTags(),
+    inputAction: "tag-input",
+    addAction: "add-form-tag",
+    removeAction: "remove-form-tag",
+  });
+}
+
+function projectEditor(projects = []) {
+  return pillEditor({
+    name: "projects",
+    label: t("project"),
+    items: projects,
+    placeholder: t("projectInputPlaceholder"),
+    presetLabel: t("projectPresets"),
+    emptyText: t("noProjectPresets"),
+    presets: uniqueProjects(),
+    inputAction: "project-input",
+    addAction: "add-form-project",
+    removeAction: "remove-form-project",
+  });
 }
 
 function renderMediaGrid() {
@@ -858,7 +913,7 @@ function renderModal() {
           <input type="hidden" name="id" value="${concert.id || ""}" />
           <div class="form-grid">
             ${field("title", t("title"), concert.title, true)}
-            ${field("project", t("project"), concert.project)}
+            ${projectEditor(concertProjects(concert, false))}
             ${field("date", t("date"), concert.date, false, "date")}
             ${field("themeColor", t("themeColor"), concert.themeColor, false, "select")}
             ${field("city", t("city"), concert.city)}
@@ -914,37 +969,42 @@ function getTagEditor(source) {
   return source.closest(".tag-editor");
 }
 
-function getFormTags(source) {
+function getEditorItems(source) {
   const editor = getTagEditor(source);
-  const hidden = editor?.querySelector('input[name="tags"]');
+  const hidden = editor?.querySelector('input[type="hidden"]');
   return splitLines(hidden?.value || "");
 }
 
-function setFormTags(source, tags) {
+function setEditorItems(source, items) {
   const editor = getTagEditor(source);
   if (!editor) return;
-  const cleanTags = [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))];
-  const hidden = editor.querySelector('input[name="tags"]');
+  const name = editor.dataset.editorName;
+  const cleanItems = [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+  const hidden = editor.querySelector('input[type="hidden"]');
   const selected = editor.querySelector(".selected-tags");
   const presets = editor.querySelector(".preset-tags");
-  const input = editor.querySelector('[data-action="tag-input"]');
+  const input = editor.querySelector("input:not([type='hidden'])");
+  const removeAction = name === "projects" ? "remove-form-project" : "remove-form-tag";
+  const addAction = name === "projects" ? "add-form-project" : "add-form-tag";
+  const presetSource = name === "projects" ? uniqueProjects() : uniqueTags();
+  const emptyText = name === "projects" ? t("noProjectPresets") : t("noTagPresets");
 
-  hidden.value = joinLines(cleanTags);
-  selected.innerHTML = renderSelectedTagTokens(cleanTags);
-  presets.innerHTML = renderPresetTags(cleanTags);
+  hidden.value = joinLines(cleanItems);
+  selected.innerHTML = renderSelectedTagTokens(cleanItems).replaceAll("remove-form-tag", removeAction);
+  presets.innerHTML = renderPresetPills(cleanItems, presetSource, emptyText, addAction);
   input.value = "";
 }
 
-function addFormTag(source, value) {
+function addEditorItem(source, value) {
   const incoming = splitLines(value);
   if (!incoming.length) return;
-  setFormTags(source, [...getFormTags(source), ...incoming]);
+  setEditorItems(source, [...getEditorItems(source), ...incoming]);
 }
 
-function removeFormTag(source, tag) {
-  setFormTags(
+function removeEditorItem(source, tag) {
+  setEditorItems(
     source,
-    getFormTags(source).filter((item) => item !== tag),
+    getEditorItems(source).filter((item) => item !== tag),
   );
 }
 
@@ -981,15 +1041,19 @@ async function openConcert(id) {
 
 async function saveForm(form) {
   const tagInput = form.querySelector('[data-action="tag-input"]');
-  if (tagInput?.value.trim()) addFormTag(tagInput, tagInput.value);
+  if (tagInput?.value.trim()) addEditorItem(tagInput, tagInput.value);
+  const projectInput = form.querySelector('[data-action="project-input"]');
+  if (projectInput?.value.trim()) addEditorItem(projectInput, projectInput.value);
 
   const data = new FormData(form);
   const existing = data.get("id") ? await getConcertData(data.get("id")) : {};
+  const projects = splitLines(data.get("projects"));
   const concert = {
     ...existing,
     id: data.get("id") || undefined,
     title: data.get("title").trim(),
-    project: data.get("project").trim(),
+    project: projects.length ? "" : existing.project || "",
+    projects,
     date: data.get("date"),
     city: data.get("city").trim(),
     venue: data.get("venue").trim(),
@@ -1136,12 +1200,12 @@ app.addEventListener("click", async (event) => {
     render();
   }
 
-  if (action === "add-form-tag") {
-    addFormTag(actionEl, actionEl.dataset.tag);
+  if (action === "add-form-tag" || action === "add-form-project") {
+    addEditorItem(actionEl, actionEl.dataset.value || actionEl.dataset.tag);
   }
 
-  if (action === "remove-form-tag") {
-    removeFormTag(actionEl, actionEl.dataset.tag);
+  if (action === "remove-form-tag" || action === "remove-form-project") {
+    removeEditorItem(actionEl, actionEl.dataset.tag);
   }
 
   if (action === "set-cover") {
@@ -1239,16 +1303,16 @@ app.addEventListener("input", async (event) => {
 
 app.addEventListener("keydown", (event) => {
   const target = event.target;
-  if (target.dataset.action !== "tag-input") return;
+  if (target.dataset.action !== "tag-input" && target.dataset.action !== "project-input") return;
   if (event.key !== "Enter" || event.isComposing) return;
   event.preventDefault();
-  addFormTag(target, target.value);
+  addEditorItem(target, target.value);
 });
 
 app.addEventListener("focusout", (event) => {
   const target = event.target;
-  if (target.dataset.action !== "tag-input") return;
-  if (target.value.trim()) addFormTag(target, target.value);
+  if (target.dataset.action !== "tag-input" && target.dataset.action !== "project-input") return;
+  if (target.value.trim()) addEditorItem(target, target.value);
 });
 
 app.addEventListener("change", async (event) => {
