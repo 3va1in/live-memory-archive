@@ -99,6 +99,7 @@ function toDbConcert(concert) {
   return {
     title: concert.title,
     project: concert.project,
+    projects: concert.projects || [],
     date: concert.date || null,
     city: concert.city,
     venue: concert.venue,
@@ -126,6 +127,7 @@ function fromDbConcert(row) {
     id: row.id,
     title: row.title || "",
     project: row.project || "",
+    projects: row.projects || [],
     date: row.date || "",
     city: row.city || "",
     venue: row.venue || "",
